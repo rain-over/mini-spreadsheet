@@ -1,8 +1,3 @@
-//temp
-/**
- * @todo make it dynamically generated.
- */
-
 const tableHeaders = [
   'A',
   'B',
