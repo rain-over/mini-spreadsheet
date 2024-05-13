@@ -1,13 +1,6 @@
 const size = [100, 100];
 const container = document.querySelector('#mini-sprdxt');
 
-/**
- * @todo improve later, static for now.
- */
-function getHeaderLabels() {
-  return [' ', ...tableHeaders];
-}
-
 function renderTable() {
   const headerLabels = getHeaderLabels();
   const [row, column] = size;
@@ -30,7 +23,7 @@ function renderTable() {
     for (let c = 0; c <= column; c++) {
       let td = document.createElement('td');
 
-      td.textContent = `${headerLabels[c]}${r}`;
+      td.onclick = handleCellClick;
 
       if (c === 0) {
         td = document.createElement('th');
@@ -45,6 +38,38 @@ function renderTable() {
   table.appendChild(thead);
   table.appendChild(tbody);
   container.appendChild(table);
+}
+
+function renderCellTextBox(cell, text) {
+  const tbox = document.createElement('input');
+  tbox.type = 'number';
+  tbox.value = text;
+
+  tbox.onblur = () => {
+    console.log('blur');
+    cell.textContent = tbox.value;
+  };
+
+  return tbox;
+}
+
+/**
+ * @todo improve later, static for now.
+ */
+function getHeaderLabels() {
+  return [' ', ...tableHeaders];
+}
+
+function handleCellClick(e) {
+  const { target } = e;
+  const { textContent, tagName } = target;
+  const tbox = renderCellTextBox(target, textContent);
+
+  if (target.tagName === 'INPUT') return;
+
+  target.textContent = '';
+  target.appendChild(tbox);
+  tbox.focus();
 }
 
 (function () {
