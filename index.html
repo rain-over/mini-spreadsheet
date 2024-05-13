@@ -4,8 +4,31 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Mini Spreadsheet</title>
+    <style>
+      table,
+      th,
+      td {
+        border: 1px solid black;
+        border-collapse: collapse;
+      }
+
+      th,
+      td {
+        min-width: 50px;
+      }
+
+      th {
+        text-align: center;
+      }
+
+      td {
+        text-align: right;
+      }
+    </style>
   </head>
   <body>
+    <div id="mini-sprdxt"></div>
+    <script src="./src/tempHeaders.js"></script>
     <script src="./src/index.js"></script>
   </body>
 </html>
