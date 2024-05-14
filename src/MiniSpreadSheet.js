@@ -2,23 +2,31 @@ class MiniSpreadSheet {
   _functions = ['SUM', 'AVERAGE', 'COUNT', 'MAX', 'MIN'];
 
   constructor(data = [], size = [100, 100], containerID = 'mini-sprdxt') {
+    this.activeCell = 'A1';
     this.container = document.querySelector(`#${containerID}`);
     this.data = data;
     this.size = size;
   }
 
+  /**
+   * @todo: divide into smaller function
+   */
   render() {
     const headerLabels = this.getHeaderLabels();
     const {
       data,
       size: [row, column],
+      activeCell,
     } = this;
 
+    const formatter = this.renderFormatButtons();
     const table = document.createElement('table');
     const thead = document.createElement('thead');
     const tbody = document.createElement('tbody');
 
     const thead_tr = document.createElement('tr');
+    const activeCol = activeCell.match(/[A-Z]+/)[0];
+    const activeRow = activeCell.match(/[0-9]+/)[0];
 
     //headers
     for (let c = 0; c <= column; c++) {
@@ -40,8 +48,13 @@ class MiniSpreadSheet {
         td.onclick = this.handleCellClick.bind(this);
 
         if (cellId in data) {
-          const { value } = data[cellId];
+          const { value, format } = data[cellId];
           td.textContent = value;
+          td.classList.add(...(format || []));
+        }
+
+        if (activeCell === cellId) {
+          td.classList.add('active');
         }
 
         if (c === 0) {
@@ -64,6 +77,7 @@ class MiniSpreadSheet {
       document.body.appendChild(newContainer);
       this.container = newContainer;
     }
+    this.container.appendChild(formatter);
     this.container.appendChild(table);
   }
 
@@ -77,6 +91,32 @@ class MiniSpreadSheet {
 
     tbox.onblur = this.handleCellBlur.bind(this);
     return tbox;
+  }
+
+  renderFormatButtons() {
+    const container = document.createElement('div');
+    container.classList.add('mini-sprdxt-formatter');
+
+    const bold = document.createElement('div');
+    bold.setAttribute('id', 'bold');
+    bold.textContent = 'B';
+    bold.onclick = this.handleFormatToggle.bind(this);
+
+    const italic = document.createElement('div');
+    italic.setAttribute('id', 'italic');
+    italic.textContent = 'I';
+    italic.onclick = this.handleFormatToggle.bind(this);
+
+    const underline = document.createElement('div');
+    underline.setAttribute('id', 'underline');
+    underline.textContent = 'U';
+    underline.onclick = this.handleFormatToggle.bind(this);
+
+    container.appendChild(bold);
+    container.appendChild(italic);
+    container.appendChild(underline);
+
+    return container;
   }
 
   destroy() {
@@ -239,6 +279,37 @@ class MiniSpreadSheet {
     target.textContent = '';
     target.appendChild(tbox);
     tbox.focus();
+
+    this.setActiveCell(id);
+  }
+
+  /**
+   * @todo Add active class for format buttons
+   */
+  handleFormatToggle(e) {
+    console.log('format');
+    const { id } = e.target;
+    const { activeCell } = this;
+    const data = { ...this.data[activeCell] };
+
+    // document.querySelector(`#${activeCell}`).classList.add(id);
+
+    if (data.format) {
+      if (data.format.includes(id)) {
+        const format = this.data[activeCell].format.filter((x) => x !== id);
+
+        this.data[activeCell].format = [...format];
+      } else {
+        this.data[activeCell].format.push(id);
+      }
+    } else {
+      this.data[activeCell] = { ...data, format: [id] };
+    }
+
+    document.querySelector(`#${activeCell}`).className = 'active';
+    this.data[activeCell]?.format.forEach((s) => {
+      document.querySelector(`#${activeCell}`).classList.add(s);
+    });
   }
 
   repopulateCells() {
@@ -268,5 +339,14 @@ class MiniSpreadSheet {
 
     this.data[id] = { ...(cellData || []), value, formula };
     this.repopulateCells();
+  }
+
+  setActiveCell(id) {
+    this.activeCell = id;
+
+    document.querySelectorAll('td.active').forEach((td) => {
+      td.classList.remove('active');
+    });
+    document.querySelector(`#${id}`).classList.add('active');
   }
 }
