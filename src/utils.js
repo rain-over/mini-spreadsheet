@@ -150,3 +150,16 @@ const tableHeaders = [
   'ES',
   'ET',
 ];
+
+const calculate = {
+  SUM: (range) => {
+    return range.reduce(
+      (accumulator, currentValue) => accumulator + currentValue,
+      0
+    );
+  },
+  AVERAGE: (range) => range,
+  COUNT: (range) => range,
+  MAX: (range) => range,
+  MIN: (range) => range,
+};

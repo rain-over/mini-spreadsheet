@@ -1,4 +1,6 @@
 class MiniSpreadSheet {
+  _functions = ['SUM', 'AVERAGE', 'COUNT', 'MAX', 'MIN'];
+
   constructor(data = [], size = [100, 100], containerID = 'mini-sprdxt') {
     this.container = document.querySelector(`#${containerID}`);
     this.data = data;
@@ -90,8 +92,14 @@ class MiniSpreadSheet {
 
     try {
       for (const cell of formula) {
+        const functionName = this._functions.find((f) => cell.startsWith(f));
+
         if (/[*\/+\-]/.test(cell)) {
-          expression += cell; //operators
+          //check if operator
+          expression += cell;
+        } else if (functionName) {
+          //check if a function
+          expression += this.evaluateFunction(cell, functionName);
         } else {
           expression += this.evaluateFormula(cell);
         }
@@ -102,6 +110,10 @@ class MiniSpreadSheet {
     }
 
     return this.evaluateExpression(expression);
+  }
+
+  evaluateExpression(expression) {
+    return new Function(`return ${expression}`)();
   }
 
   evaluateFormula(cell) {
@@ -131,8 +143,60 @@ class MiniSpreadSheet {
     return expression;
   }
 
-  evaluateExpression(expression) {
-    return new Function(`return ${expression}`)();
+  /**
+   * @todo Handle comma (,) in range.
+   * @todo Implement other functions.
+   * @todo recalculate value if cell in range has formula.
+   */
+  evaluateFunction(cell, functionName) {
+    console.log('eval function');
+    // regex to check if function has range; check if function is valid.
+    // =sum(A1:A10)
+    const match = cell.match(/\(([^)]+)\)/);
+    let expression = [];
+    let value;
+
+    if (match) {
+      const [start, end] = match[1].split(':');
+      const range = this.getCellsinRange(start, end);
+
+      for (const c of range) {
+        const cellValue = this.evaluateFormula(c);
+
+        expression.push(+cellValue);
+      }
+
+      value = calculate[functionName](expression);
+    } else {
+      throw new Error('Invalid Formula');
+    }
+    return value;
+  }
+
+  getCellsinRange(start, end) {
+    const columnRegex = /[A-Z]+/;
+    const rowRegex = /[0-9]+/;
+
+    const rowStart = +start.match(rowRegex)[0];
+    const rowEnd = +end.match(rowRegex)[0];
+
+    const colStart = tableHeaders.indexOf(start.match(columnRegex)[0]);
+    const colEnd = tableHeaders.indexOf(end.match(columnRegex)[0]);
+
+    const rowMax = Math.max(rowStart, rowEnd);
+    const rowMin = Math.min(rowStart, rowEnd);
+    const colMax = Math.max(colStart, colEnd);
+    const colMin = Math.min(colStart, colEnd);
+
+    let cells = [];
+
+    for (let r = rowMin; r <= rowMax; r++) {
+      for (let c = colMin; c <= colMax; c++) {
+        cells.push(`${tableHeaders[c]}${r}`);
+      }
+    }
+
+    return cells;
   }
 
   /**
