@@ -65,21 +65,74 @@ class MiniSpreadSheet {
     this.container.appendChild(table);
   }
 
-  renderCellTextBox(cell, text) {
-    const tbox = document.createElement('input');
-    tbox.type = 'number';
-    tbox.value = text;
+  renderCellTextBox(cellId) {
+    const { data } = this;
+    const value = data[cellId]?.formula || data[cellId]?.value || '';
 
-    // tbox.onblur = () => {
-    //   console.log('blur');
-    //   cell.textContent = tbox.value;
-    // };
+    const tbox = document.createElement('input');
+    tbox.type = 'text';
+    tbox.value = value;
+
     tbox.onblur = this.handleCellBlur.bind(this);
     return tbox;
   }
 
   destroy() {
     this.container.innerHTML = '';
+  }
+
+  evaluate(value) {
+    let formula = value.startsWith('=') ? value.slice(1) : value;
+    let expression = '';
+
+    //split cells and operators
+    formula = formula.toUpperCase().split(/([*\/+\-])/);
+
+    try {
+      for (const cell of formula) {
+        if (/[*\/+\-]/.test(cell)) {
+          expression += cell; //operators
+        } else {
+          expression += this.evaluateFormula(cell);
+        }
+      }
+    } catch (error) {
+      // throw new Error(error);
+      return '#ERROR!';
+    }
+
+    return this.evaluateExpression(expression);
+  }
+
+  evaluateFormula(cell) {
+    let expression;
+
+    switch (true) {
+      //check if cell in data then return value
+      case cell in this.data:
+        expression = this.data[cell].value;
+
+        break;
+      //check if number
+      case /^\d+(\.\d+)?$/.test(cell):
+        expression = cell;
+
+        break;
+      //check if no data value but existing cell address
+      case document.querySelector(`#${cell}`) !== null:
+        expression = 0;
+
+        break;
+      default:
+        console.log('Error', 'Evaluate Formula');
+        throw new Error('Evaluate Formula');
+    }
+
+    return expression;
+  }
+
+  evaluateExpression(expression) {
+    return new Function(`return ${expression}`)();
   }
 
   /**
@@ -90,32 +143,66 @@ class MiniSpreadSheet {
   }
 
   handleCellBlur(e) {
-    const { target } = e;
     const { parentElement, value } = e.target;
     const { id } = parentElement;
 
-    parentElement.textContent = value;
+    let newValue = value;
+    let formula;
 
-    this.saveData(id, value);
+    if (value.startsWith('=')) {
+      newValue = this.evaluate(value);
+      formula = value;
+    }
+
+    if (newValue.toString().includes('ERROR')) {
+      parentElement.textContent = newValue;
+      return false;
+    }
+
+    parentElement.textContent = newValue;
+
+    this.saveData(id, newValue, formula);
   }
 
   handleCellClick(e) {
     const { target } = e;
-    const { textContent, tagName } = target;
-    const tbox = this.renderCellTextBox(target, textContent);
+    const { textContent, tagName, id } = target;
 
-    if (target.tagName === 'INPUT') return;
+    if (tagName === 'INPUT') return;
+
+    const tbox = this.renderCellTextBox(id);
 
     target.textContent = '';
     target.appendChild(tbox);
     tbox.focus();
   }
 
-  saveData(cellId, newValue) {
-    const id = cellId.toUpperCase();
+  repopulateCells() {
+    console.log('repopulate');
 
+    const { data } = this;
+
+    for (const cellId in data) {
+      if (data[cellId].formula) {
+        const value = this.evaluate(data[cellId].formula);
+
+        this.data[cellId] = { ...this.data[cellId], value };
+      }
+
+      const cell = document.querySelector(`#${cellId}`);
+      if (cell) {
+        cell.textContent = this.data[cellId].value;
+      }
+    }
+  }
+
+  saveData(cellId, value, formula) {
+    console.log('save data');
+
+    const id = cellId.toUpperCase();
     const cellData = this.data[id];
 
-    this.data[id] = { ...(cellData || []), value: newValue };
+    this.data[id] = { ...(cellData || []), value, formula };
+    this.repopulateCells();
   }
 }
