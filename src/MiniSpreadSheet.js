@@ -1,51 +1,53 @@
-class MiniSpreadSheet {
+import { calculate, getCellsinRange, getTableHeaders } from './utils.js';
+
+export default class MiniSpreadSheet {
   _functions = ['SUM', 'AVERAGE', 'COUNT', 'MAX', 'MIN'];
+  _tableID = 'mini-sprdxt-table';
 
   constructor(data = [], size = [100, 100], containerID = 'mini-sprdxt') {
     this.activeCell = 'A1';
     this.container = document.querySelector(`#${containerID}`);
     this.data = data;
+    this.keyPressed = false;
     this.size = size;
+    this.tableHeaders = '';
   }
 
   /**
    * @todo: divide into smaller function
    */
   render() {
-    const headerLabels = this.getHeaderLabels();
+    const tableHeaders = getTableHeaders(this.size[0]);
     const {
       data,
       size: [row, column],
       activeCell,
     } = this;
 
-    const formatter = this.renderFormatButtons();
+    const formatButtons = this.renderFormatButtons();
     const table = document.createElement('table');
     const thead = document.createElement('thead');
     const tbody = document.createElement('tbody');
 
     const thead_tr = document.createElement('tr');
-    const activeCol = activeCell.match(/[A-Z]+/)[0];
-    const activeRow = activeCell.match(/[0-9]+/)[0];
 
     //headers
     for (let c = 0; c <= column; c++) {
       const th = document.createElement('th');
-      th.textContent = headerLabels[c];
+      th.textContent = tableHeaders[c];
       thead_tr.appendChild(th);
     }
     thead.appendChild(thead_tr);
 
-    //content
+    //body
     for (let r = 1; r <= row; r++) {
       const tr = document.createElement('tr');
 
       for (let c = 0; c <= column; c++) {
-        const cellId = headerLabels[c] + r;
+        const cellId = tableHeaders[c] + r;
         let td = document.createElement('td');
 
         td.id = cellId;
-        td.onclick = this.handleCellClick.bind(this);
 
         if (cellId in data) {
           const { value, format } = data[cellId];
@@ -69,6 +71,7 @@ class MiniSpreadSheet {
 
     table.appendChild(thead);
     table.appendChild(tbody);
+    table.id = this._tableID;
 
     if (!this.container) {
       const newContainer = document.createElement('div');
@@ -77,8 +80,11 @@ class MiniSpreadSheet {
       document.body.appendChild(newContainer);
       this.container = newContainer;
     }
-    this.container.appendChild(formatter);
+    this.container.appendChild(formatButtons);
     this.container.appendChild(table);
+    this.tableHeaders = tableHeaders;
+
+    this.AddHandlers();
   }
 
   renderCellTextBox(cellId) {
@@ -89,34 +95,52 @@ class MiniSpreadSheet {
     tbox.type = 'text';
     tbox.value = value;
 
-    tbox.onblur = this.handleCellBlur.bind(this);
     return tbox;
   }
 
   renderFormatButtons() {
     const container = document.createElement('div');
-    container.classList.add('mini-sprdxt-formatter');
+    container.classList.add('mini-sprdxt-formatButtons');
 
     const bold = document.createElement('div');
     bold.setAttribute('id', 'bold');
     bold.textContent = 'B';
-    bold.onclick = this.handleFormatToggle.bind(this);
 
     const italic = document.createElement('div');
     italic.setAttribute('id', 'italic');
     italic.textContent = 'I';
-    italic.onclick = this.handleFormatToggle.bind(this);
 
     const underline = document.createElement('div');
     underline.setAttribute('id', 'underline');
     underline.textContent = 'U';
-    underline.onclick = this.handleFormatToggle.bind(this);
 
     container.appendChild(bold);
     container.appendChild(italic);
     container.appendChild(underline);
 
     return container;
+  }
+
+  AddHandlers() {
+    const { container } = this;
+    const table = container.querySelector(`#${this._tableID}`);
+    const formatButtons = container.querySelector('.mini-sprdxt-formatButtons');
+
+    formatButtons.addEventListener('click', (e) => {
+      console.log('formatButtons');
+      this.handleFormatToggle(e);
+    });
+    table.addEventListener('focusout', (e) => {
+      console.log('blur');
+      this.handleCellBlur(e);
+    });
+    table.addEventListener('click', (e) => {
+      this.handleCellClick(e);
+    });
+    table.addEventListener('keydown', (e) => {
+      console.log('Key pressed:', event.key);
+      this.handleKeyPress(e);
+    });
   }
 
   destroy() {
@@ -145,7 +169,7 @@ class MiniSpreadSheet {
         }
       }
     } catch (error) {
-      // throw new Error(error);
+      console.log('Error', error);
       return '#ERROR!';
     }
 
@@ -192,13 +216,14 @@ class MiniSpreadSheet {
     console.log('eval function');
     // regex to check if function has range; check if function is valid.
     // =sum(A1:A10)
+    const { tableHeaders } = this;
     const match = cell.match(/\(([^)]+)\)/);
     let expression = [];
     let value;
 
     if (match) {
       const [start, end] = match[1].split(':');
-      const range = this.getCellsinRange(start, end);
+      const range = getCellsinRange(tableHeaders, start, end);
 
       for (const c of range) {
         const cellValue = this.evaluateFormula(c);
@@ -213,66 +238,53 @@ class MiniSpreadSheet {
     return value;
   }
 
-  getCellsinRange(start, end) {
-    const columnRegex = /[A-Z]+/;
-    const rowRegex = /[0-9]+/;
+  getTableHeaders(colCount = 100) {
+    colCount += 1;
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const charsArray = [...chars];
+    let nextChar = [0, 0];
 
-    const rowStart = +start.match(rowRegex)[0];
-    const rowEnd = +end.match(rowRegex)[0];
+    loop1: while (colCount > charsArray.length) {
+      const c = [];
 
-    const colStart = tableHeaders.indexOf(start.match(columnRegex)[0]);
-    const colEnd = tableHeaders.indexOf(end.match(columnRegex)[0]);
-
-    const rowMax = Math.max(rowStart, rowEnd);
-    const rowMin = Math.min(rowStart, rowEnd);
-    const colMax = Math.max(colStart, colEnd);
-    const colMin = Math.min(colStart, colEnd);
-
-    let cells = [];
-
-    for (let r = rowMin; r <= rowMax; r++) {
-      for (let c = colMin; c <= colMax; c++) {
-        cells.push(`${tableHeaders[c]}${r}`);
+      for (const char of nextChar) {
+        c.unshift(charsArray[char]);
       }
+
+      for (let i = 0; i < nextChar.length; i++) {
+        const charIndex = ++nextChar[i];
+        if (charIndex >= chars.length) {
+          nextChar[i] = 0;
+        } else {
+          charsArray.push(c.join(''));
+          continue loop1;
+        }
+      }
+
+      charsArray.push(c.join(''));
+      nextChar = [...nextChar, 0];
     }
-
-    return cells;
-  }
-
-  /**
-   * @todo improve later, static for now.
-   */
-  getHeaderLabels() {
-    return [' ', ...tableHeaders];
+    return ['◢', ...charsArray].slice(0, colCount);
   }
 
   handleCellBlur(e) {
+    if (this.keyPressed && e.target.tagName !== 'INPUT') {
+      this.keyPressed = false;
+      return;
+    }
+
+    console.log('blur');
+
     const { parentElement, value } = e.target;
-    const { id } = parentElement;
 
-    let newValue = value;
-    let formula;
-
-    if (value.startsWith('=')) {
-      newValue = this.evaluate(value);
-      formula = value;
-    }
-
-    if (newValue.toString().includes('ERROR')) {
-      parentElement.textContent = newValue;
-      return false;
-    }
-
-    parentElement.textContent = newValue;
-
-    this.saveData(id, newValue, formula);
+    this.setData(parentElement, value);
   }
 
   handleCellClick(e) {
     const { target } = e;
     const { textContent, tagName, id } = target;
 
-    if (tagName === 'INPUT') return;
+    if (tagName !== 'TD') return;
 
     const tbox = this.renderCellTextBox(id);
 
@@ -283,16 +295,73 @@ class MiniSpreadSheet {
     this.setActiveCell(id);
   }
 
+  handleKeyPress(e) {
+    const { key } = e;
+    const arrowKeys = ['ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowUp'];
+
+    switch (key) {
+      case 'ArrowDown':
+        this.handleKeyPressArrows(e);
+        break;
+      case 'ArrowLeft':
+        this.handleKeyPressArrows(e);
+        break;
+      case 'ArrowRight':
+        this.handleKeyPressArrows(e);
+        break;
+      case 'ArrowUp':
+        this.handleKeyPressArrows(e);
+        break;
+      case 'Enter':
+        this.handleCellEnter(e);
+        break;
+      case 'Escape':
+        this.handleKeyPressEscape(e);
+        break;
+      case 'Tab':
+        break;
+
+      default:
+        break;
+    }
+  }
+
+  handleKeyPressArrows(e) {
+    const { key } = e;
+    console.log(key);
+  }
+
+  handleKeyPressEscape(e) {
+    this.keyPressed = true;
+    e.target.blur();
+  }
+
+  handleCellEnter(e) {
+    this.keyPressed = true;
+    const { key, target, type } = e;
+    if (type !== 'keypress' && key !== 'Enter') {
+      return;
+    }
+    const { parentElement, value } = target;
+    const { id } = parentElement;
+    console.log('enter');
+
+    this.setData(parentElement, value);
+
+    e.preventDefault();
+    return false;
+  }
+
   /**
    * @todo Add active class for format buttons
    */
   handleFormatToggle(e) {
     console.log('format');
     const { id } = e.target;
+    if (!id) return;
+
     const { activeCell } = this;
     const data = { ...this.data[activeCell] };
-
-    // document.querySelector(`#${activeCell}`).classList.add(id);
 
     if (data.format) {
       if (data.format.includes(id)) {
@@ -348,5 +417,25 @@ class MiniSpreadSheet {
       td.classList.remove('active');
     });
     document.querySelector(`#${id}`).classList.add('active');
+  }
+
+  setData(cell, value) {
+    const { id } = cell;
+    let newValue = value;
+    let formula;
+
+    if (value.startsWith('=')) {
+      newValue = this.evaluate(value);
+      formula = value;
+    }
+
+    if (newValue.toString().includes('ERROR')) {
+      cell.textContent = newValue;
+      return false;
+    }
+
+    cell.textContent = newValue;
+
+    this.saveData(id, newValue, formula);
   }
 }

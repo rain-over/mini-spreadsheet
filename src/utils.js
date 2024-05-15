@@ -1,155 +1,57 @@
-const tableHeaders = [
-  'A',
-  'B',
-  'C',
-  'D',
-  'E',
-  'F',
-  'G',
-  'H',
-  'I',
-  'J',
-  'K',
-  'L',
-  'M',
-  'N',
-  'O',
-  'P',
-  'Q',
-  'R',
-  'S',
-  'T',
-  'U',
-  'V',
-  'W',
-  'X',
-  'Y',
-  'Z',
-  'AA',
-  'AB',
-  'AC',
-  'AD',
-  'AE',
-  'AF',
-  'AG',
-  'AH',
-  'AI',
-  'AJ',
-  'AK',
-  'AL',
-  'AM',
-  'AN',
-  'AO',
-  'AP',
-  'AQ',
-  'AR',
-  'AS',
-  'AT',
-  'AU',
-  'AV',
-  'AW',
-  'AX',
-  'AY',
-  'AZ',
-  'BA',
-  'BB',
-  'BC',
-  'BD',
-  'BE',
-  'BF',
-  'BG',
-  'BH',
-  'BI',
-  'BJ',
-  'BK',
-  'BL',
-  'BM',
-  'BN',
-  'BO',
-  'BP',
-  'BQ',
-  'BR',
-  'BS',
-  'BT',
-  'BU',
-  'BV',
-  'BW',
-  'BX',
-  'BY',
-  'BZ',
-  'CA',
-  'CB',
-  'CC',
-  'CD',
-  'CE',
-  'CF',
-  'CG',
-  'CH',
-  'CI',
-  'CJ',
-  'CK',
-  'CL',
-  'CM',
-  'CN',
-  'CO',
-  'CP',
-  'CQ',
-  'CR',
-  'CS',
-  'CT',
-  'CU',
-  'CV',
-  'CW',
-  'CX',
-  'CY',
-  'CZ',
-  'DA',
-  'DB',
-  'DC',
-  'DD',
-  'DE',
-  'DF',
-  'DG',
-  'DH',
-  'DI',
-  'DJ',
-  'DK',
-  'DL',
-  'DM',
-  'DN',
-  'DO',
-  'DP',
-  'DQ',
-  'DR',
-  'DS',
-  'DT',
-  'DU',
-  'DV',
-  'DW',
-  'DX',
-  'DY',
-  'DZ',
-  'EA',
-  'EB',
-  'EC',
-  'ED',
-  'EE',
-  'EF',
-  'EG',
-  'EH',
-  'EI',
-  'EJ',
-  'EK',
-  'EL',
-  'EM',
-  'EN',
-  'EO',
-  'EP',
-  'EQ',
-  'ER',
-  'ES',
-  'ET',
-];
+const getCellsinRange = (headers, start, end) => {
+  const columnRegex = /[A-Z]+/;
+  const rowRegex = /[0-9]+/;
+
+  const rowStart = +start.match(rowRegex)[0];
+  const rowEnd = +end.match(rowRegex)[0];
+
+  const colStart = headers.indexOf(start.match(columnRegex)[0]);
+  const colEnd = headers.indexOf(end.match(columnRegex)[0]);
+
+  const rowMax = Math.max(rowStart, rowEnd);
+  const rowMin = Math.min(rowStart, rowEnd);
+  const colMax = Math.max(colStart, colEnd);
+  const colMin = Math.min(colStart, colEnd);
+
+  let cells = [];
+
+  for (let r = rowMin; r <= rowMax; r++) {
+    for (let c = colMin; c <= colMax; c++) {
+      cells.push(`${headers[c]}${r}`);
+    }
+  }
+
+  return cells;
+};
+
+const getTableHeaders = (colCount = 26) => {
+  colCount += 1;
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const charsArray = [...chars];
+  let nextChar = [0, 0];
+
+  loop1: while (colCount > charsArray.length) {
+    const c = [];
+
+    for (const char of nextChar) {
+      c.unshift(charsArray[char]);
+    }
+
+    for (let i = 0; i < nextChar.length; i++) {
+      const charIndex = ++nextChar[i];
+      if (charIndex >= chars.length) {
+        nextChar[i] = 0;
+      } else {
+        charsArray.push(c.join(''));
+        continue loop1;
+      }
+    }
+
+    charsArray.push(c.join(''));
+    nextChar = [...nextChar, 0];
+  }
+  return ['◢', ...charsArray].slice(0, colCount);
+};
 
 const calculate = {
   SUM: (range) => {
@@ -163,3 +65,5 @@ const calculate = {
   MAX: (range) => range,
   MIN: (range) => range,
 };
+
+export { calculate, getTableHeaders, getCellsinRange };
