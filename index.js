@@ -1,4 +1,4 @@
-import MiniSpreadSheet from './MiniSpreadSheet.js';
+import MiniSpreadSheet from './src/MiniSpreadSheet/MiniSpreadSheet.js';
 
 const size = [100, 100];
 const container = document.querySelector('#mini-sprdxt');

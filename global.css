@@ -9,7 +9,7 @@ td {
   border-collapse: collapse;
 }
 
-th,
+thead > th,
 td {
   min-width: 50px;
   max-width: 50px;
@@ -22,6 +22,7 @@ th {
   color: #fff;
   font-weight: 300;
   user-select: none;
+  min-width: 20px;
 }
 
 td {
