@@ -1,5 +1,8 @@
-* {
+body {
   font-family: Arial, Helvetica, sans-serif;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
 }
 
 table,
@@ -34,7 +37,7 @@ td input {
   padding: 0;
   margin: 0 auto;
   outline: 1px solid #bbbbbb;
-  /* border: 0; */
+  border: 0;
 }
 td input::-webkit-outer-spin-button,
 td input::-webkit-inner-spin-button {
@@ -81,4 +84,10 @@ td.underline input {
 
 .mini-sprdxt-formatButtons div.active {
   background-color: #bbb;
+}
+
+#mini-sprdxt-container {
+  width: 100vw;
+  height: 98vh;
+  overflow: scroll;
 }

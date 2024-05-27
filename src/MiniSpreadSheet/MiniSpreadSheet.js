@@ -1,18 +1,30 @@
 import {
   calculate,
+  cellDataToGraph,
   getCellsinRange,
-  getCellAdjacent,
   getNextCell,
-  getRowAndColById,
   getTableHeaders,
+  sortGraph,
 } from '../../lib/utils/utils.js';
 
-export default class MiniSpreadSheet {
-  _functions = ['SUM', 'AVERAGE', 'COUNT', 'MAX', 'MIN'];
-  _tableID = 'mini-sprdxt-table';
-  _directions = 'down' | 'left' | 'right' | 'up';
+import {
+  alphabet,
+  colRowRegex,
+  numbersRegex,
+  operatorsRegex,
+  valueInParenthesisRegex,
+} from '../../lib/utils/constants.js';
 
-  constructor(data = [], size = [100, 100], containerID = 'mini-sprdxt') {
+const FUNCTIONS = ['SUM', 'AVERAGE', 'COUNT', 'MAX', 'MIN'];
+const ID = 'mini-sprdxt';
+const TABLE_ID = 'mini-sprdxt-table';
+
+export default class MiniSpreadSheet {
+  constructor(
+    data = {},
+    size = [100, 100],
+    containerID = 'mini-sprdxt-container'
+  ) {
     this.activeCell = 'A1';
     this.container = document.querySelector(`#${containerID}`);
     this.data = data;
@@ -80,11 +92,11 @@ export default class MiniSpreadSheet {
 
     table.appendChild(thead);
     table.appendChild(tbody);
-    table.id = this._tableID;
+    table.id = `${ID}-table`;
 
     if (!this.container) {
       const newContainer = document.createElement('div');
-      newContainer.id = 'mini-sprdxt';
+      newContainer.id = `${ID}-container`;
 
       document.body.appendChild(newContainer);
       this.container = newContainer;
@@ -110,7 +122,7 @@ export default class MiniSpreadSheet {
 
   renderFormatButtons() {
     const container = document.createElement('div');
-    container.classList.add('mini-sprdxt-formatButtons');
+    container.classList.add(`${ID}-formatButtons`);
 
     const bold = document.createElement('div');
     bold.setAttribute('id', 'bold');
@@ -133,8 +145,8 @@ export default class MiniSpreadSheet {
 
   AddHandlers() {
     const { container } = this;
-    const table = container.querySelector(`#${this._tableID}`);
-    const formatButtons = container.querySelector('.mini-sprdxt-formatButtons');
+    const table = container.querySelector(`#${ID}-table`);
+    const formatButtons = container.querySelector(`.${ID}-formatButtons`);
 
     formatButtons.addEventListener('click', (e) => {
       this.handleFormatToggle(e);
@@ -158,60 +170,69 @@ export default class MiniSpreadSheet {
   }
 
   evaluate(value) {
-    let formula = value.startsWith('=') ? value.slice(1) : value;
+    if (!value.startsWith('=')) {
+      return value;
+    }
+
+    let formula = value.slice(1);
     let expression = '';
 
+    ///Validate if formula/function is valid.
     //split cells and operators
-    formula = formula.toUpperCase().split(/([*\/+\-])/);
+    formula = formula.toUpperCase().split(operatorsRegex);
 
-    try {
-      for (const cell of formula) {
-        const functionName = this._functions.find((f) => cell.startsWith(f));
+    for (const cell of formula) {
+      const functionName = FUNCTIONS.find((f) => cell.startsWith(f));
 
-        if (/[*\/+\-]/.test(cell)) {
-          //check if operator
-          expression += cell;
-        } else if (functionName) {
-          //check if a function
-          expression += this.evaluateFunction(cell, functionName);
-        } else {
-          expression += this.evaluateFormula(cell);
-        }
+      if (operatorsRegex.test(cell)) {
+        // check if operator: * / + -
+        expression += cell;
+      } else if (functionName) {
+        //check if a function: sum, avg, etc.
+        expression += this.evaluateFunction(cell, functionName);
+      } else {
+        expression += this.evaluateFormula(cell);
       }
-    } catch (error) {
-      console.log('Error', error);
-      return '#ERROR!';
     }
 
     return this.evaluateExpression(expression);
   }
 
   evaluateExpression(expression) {
-    return new Function(`return ${expression}`)();
+    //eval() parse string expression
+    return expression === '' ? 0 : new Function(`return ${expression}`)();
   }
 
   evaluateFormula(cell) {
     let expression;
+    const { data } = this;
 
     switch (true) {
-      //check if cell in data then return value
-      case cell in this.data:
-        expression = this.data[cell].value;
-
+      case cell in data:
+        //get cell data
+        expression = data[cell].value || 0;
         break;
-      //check if number
-      case /^\d+(\.\d+)?$/.test(cell):
+
+      case numbersRegex.test(cell):
+        //check if number
         expression = cell;
-
         break;
-      //check if no data value but existing cell address
-      case document.querySelector(`#${cell}`) !== null:
-        expression = 0;
 
-        break;
+      // case document.querySelector(`#${cell}`) !== null:
+      //   //check if no data value but existing cell address
+      //   expression = 0;
+      //   break;
+
       default:
-        console.log('Error', 'Evaluate Formula');
-        throw new Error('Evaluate Formula');
+        const [row, col] = cell.match(colRowRegex);
+        if (row && col) {
+          if (document.querySelector(`#${cell}`) !== null) {
+            expression = 0;
+          }
+        } else {
+          console.log('Error', 'Evaluate Formula');
+          throw new Error('Invalid Formula');
+        }
     }
 
     return expression;
@@ -224,10 +245,10 @@ export default class MiniSpreadSheet {
    */
   evaluateFunction(cell, functionName) {
     console.log('eval function');
-    // regex to check if function has range; check if function is valid.
-    // =sum(A1:A10)
+
     const { tableHeaders } = this;
-    const match = cell.match(/\(([^)]+)\)/);
+    const match = cell.match(valueInParenthesisRegex); // get value inside ( )
+
     let expression = [];
     let value;
 
@@ -243,15 +264,14 @@ export default class MiniSpreadSheet {
 
       value = calculate[functionName](expression);
     } else {
-      throw new Error('Invalid Formula');
+      throw new Error('Invalid Function');
     }
     return value;
   }
 
   getTableHeaders(colCount = 100) {
     colCount += 1;
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    const charsArray = [...chars];
+    const charsArray = [...alphabet];
     let nextChar = [0, 0];
 
     loop1: while (colCount > charsArray.length) {
@@ -290,7 +310,7 @@ export default class MiniSpreadSheet {
 
     const { parentElement, value } = e.target;
 
-    this.setCellTextContent(parentElement, value);
+    this.write(parentElement, value);
   }
 
   handleCellClick(e) {
@@ -356,11 +376,12 @@ export default class MiniSpreadSheet {
 
     let currentCell = target;
     const { parentElement, value, tagName } = target;
+
     if (tagName === 'INPUT') {
-      this.setCellTextContent(parentElement, value);
+      this.write(parentElement, value);
       currentCell = parentElement;
     } else {
-      console.log('test');
+      console.log('arrow INPUT else');
     }
 
     this.moveCell(currentCell, direction[key]);
@@ -394,7 +415,7 @@ export default class MiniSpreadSheet {
     let currentCell = target;
     const { parentElement, value, tagName } = target;
     if (tagName === 'INPUT') {
-      this.setCellTextContent(parentElement, value);
+      this.write(parentElement, value);
       currentCell = parentElement;
     } else {
       console.log('test');
@@ -440,7 +461,7 @@ export default class MiniSpreadSheet {
     if (cell.tagName !== 'TD') return;
 
     const { tableHeaders } = this;
-    const [columnLabel, row] = cell.id.match(/[A-Z]+|[0-9]+/g);
+    const [columnLabel, row] = cell.id.match(colRowRegex);
     const [nextColumn, nextRow] = getNextCell[direction](
       tableHeaders.indexOf(columnLabel),
       +row
@@ -472,14 +493,16 @@ export default class MiniSpreadSheet {
     }
   }
 
-  setData(cellId, value, formula) {
-    console.log('save data');
-
+  saveData(cellId, value, formula) {
     const id = cellId.toUpperCase();
     const cellData = this.data[id];
 
     this.data[id] = { ...(cellData || []), value, formula };
-    this.repopulateCells();
+  }
+
+  setData(cell, value, formula) {
+    this.saveData(cell.id, value, formula);
+    cell.textContent = value;
   }
 
   setActiveCell(id) {
@@ -494,23 +517,71 @@ export default class MiniSpreadSheet {
     activeCell.focus();
   }
 
-  setCellTextContent(cell, value) {
+  write(cell, value) {
     const { id } = cell;
-    let newValue = value;
-    let formula;
 
-    if (value.startsWith('=')) {
+    let formula = '';
+    let newValue = '';
+    let updateOrder = [];
+
+    // evaluate and validate formula
+    try {
       newValue = this.evaluate(value);
-      formula = value;
-    }
-
-    if (newValue.toString().includes('ERROR')) {
-      cell.textContent = newValue;
+      updateOrder = this.getUpdateOrder(id, value, newValue);
+    } catch (error) {
+      cell.textContent = `#Error: ${error}`;
       return false;
     }
 
-    cell.textContent = newValue;
+    formula = newValue === value ? '' : value;
+    this.setData(cell, newValue, formula);
 
-    this.setData(id, newValue, formula);
+    if (updateOrder.length) {
+      this.updateDependencies(id, updateOrder);
+    }
+  }
+
+  getUpdateOrder(id, value, newValue) {
+    let tempData = { ...this.data };
+
+    tempData[id] = {
+      ...(newValue === '' ? { value } : { value: newValue, formula: value }),
+    };
+
+    console.log('validate', tempData);
+    const cellDataGraph = cellDataToGraph(tempData);
+    const sortedGraph = sortGraph(cellDataGraph);
+    const hasFormula = Object.values(tempData).some(
+      (obj) => obj.formula && obj.formula.trim() !== ''
+    );
+
+    if (!sortedGraph.length && hasFormula) {
+      throw new Error('Circular reference detected.');
+    }
+
+    return sortedGraph;
+  }
+
+  updateDependencies(id, cellUpdateOrder) {
+    let newOrder = [...cellUpdateOrder];
+
+    if (cellUpdateOrder.indexOf(id) >= 0) {
+      newOrder = newOrder.slice(
+        cellUpdateOrder.indexOf(id) + 1,
+        cellUpdateOrder.length
+      );
+    }
+
+    const { data } = this;
+
+    for (const cellId of newOrder) {
+      console.log(cellId);
+
+      const { formula = '', value } = data[cellId];
+      const cell = document.querySelector(`#${cellId}`);
+      const newValue = this.evaluate(formula);
+
+      this.setData(cell, formula === '' ? value : newValue, formula);
+    }
   }
 }
