@@ -15,9 +15,7 @@ import {
   valueInParenthesisRegex,
 } from '../../lib/utils/constants.js';
 
-const FUNCTIONS = ['SUM', 'AVERAGE', 'COUNT', 'MAX', 'MIN'];
 const ID = 'mini-sprdxt';
-const TABLE_ID = 'mini-sprdxt-table';
 
 export default class MiniSpreadSheet {
   constructor(
@@ -329,7 +327,6 @@ export default class MiniSpreadSheet {
    */
   handleKeyPress(e) {
     const { key } = e;
-    const arrowKeys = ['ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowUp'];
 
     switch (key) {
       case 'ArrowUp':
@@ -455,7 +452,9 @@ export default class MiniSpreadSheet {
     formula = formula.toUpperCase().split(operatorsRegex);
 
     for (const cell of formula) {
-      const functionName = FUNCTIONS.find((f) => cell.startsWith(f));
+      const functionName = Object.keys(calculate).find((f) =>
+        cell.startsWith(f)
+      );
 
       if (operatorsRegex.test(cell)) {
         // check if operator: * / + -
@@ -578,39 +577,6 @@ export default class MiniSpreadSheet {
     }
 
     return sortedGraph;
-  }
-
-  /**
-   * Returns the column headers in an array depending on the size of the sheet.
-   * @param {number} colCount - number of columns on the current sheet.
-   * @returns {string[]} an array of string: A, B,... Y, Z, AA, AB,.. etc.
-   */
-  getTableHeaders(colCount = 100) {
-    colCount += 1;
-    const charsArray = [...alphabet];
-    let nextChar = [0, 0];
-
-    loop1: while (colCount > charsArray.length) {
-      const c = [];
-
-      for (const char of nextChar) {
-        c.unshift(charsArray[char]);
-      }
-
-      for (let i = 0; i < nextChar.length; i++) {
-        const charIndex = ++nextChar[i];
-        if (charIndex >= chars.length) {
-          nextChar[i] = 0;
-        } else {
-          charsArray.push(c.join(''));
-          continue loop1;
-        }
-      }
-
-      charsArray.push(c.join(''));
-      nextChar = [...nextChar, 0];
-    }
-    return ['◢', ...charsArray].slice(0, colCount);
   }
 
   /**

@@ -1,0 +1,30 @@
+{
+  "name": "mini-spreadsheet",
+  "version": "1.0.0",
+  "description": "Vanilla JS Web-based spreadsheet exercise.",
+  "main": "index.js",
+  "directories": {
+    "lib": "lib"
+  },
+  "type": "module",
+  "scripts": {
+    "test": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --runInBand --coverage",
+    "start": "ws"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "local-web-server": "^5.3.3"
+  },
+  "jest": {
+    "coverageThreshold": {
+      "global": {
+        "branches": 80,
+        "functions": 80,
+        "lines": 80,
+        "statements": 80
+      }
+    }
+  }
+}
