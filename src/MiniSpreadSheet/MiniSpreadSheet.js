@@ -1,10 +1,12 @@
 import {
   calculate,
   cellDataToGraph,
+  convertToPostFix,
   getCellsinRange,
   getNextCell,
   getTableHeaders,
   sortGraph,
+  postfixEvaluator,
 } from '../../lib/utils/utils.js';
 
 import {
@@ -447,6 +449,7 @@ export default class MiniSpreadSheet {
 
     let formula = value.slice(1);
     let expression = '';
+    let expressionArray = [];
 
     //split cells and operators
     formula = formula.toUpperCase().split(operatorsRegex);
@@ -458,16 +461,20 @@ export default class MiniSpreadSheet {
 
       if (operatorsRegex.test(cell)) {
         // check if operator: * / + -
-        expression += cell;
+        // expression += cell;
+        expressionArray.push(cell);
       } else if (functionName) {
         //check if a function: sum, avg, etc.
-        expression += this.evaluateFunction(cell, functionName);
+        // expression += this.evaluateFunction(cell, functionName);
+        expressionArray.push(this.evaluateFunction(cell, functionName));
       } else {
-        expression += this.evaluateFormula(cell);
+        // expression += this.evaluateFormula(cell);
+        expressionArray.push(this.evaluateFormula(cell));
       }
     }
+    const postfix = convertToPostFix(expressionArray);
 
-    return this.evaluateExpression(expression);
+    return postfixEvaluator(postfix);
   }
 
   /**
@@ -654,6 +661,8 @@ export default class MiniSpreadSheet {
     let formula = '';
     let newValue = '';
     let updateOrder = [];
+
+    value = value.trim();
 
     // evaluate and validate formula
     try {

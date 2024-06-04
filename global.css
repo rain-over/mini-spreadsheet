@@ -14,9 +14,9 @@ td {
 
 thead > th,
 td {
-  min-width: 50px;
-  max-width: 50px;
-  overflow: hidden;
+  min-width: 60px;
+  max-width: 60px;
+  /* overflow: hidden; */
 }
 
 th {
